@@ -1,42 +1,14 @@
-const express = require('express');
 const serverless = require('serverless-http');
-const fetch = require('node-fetch');
+const express = require('express');
 const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
+const fetch = require('node-fetch');
 
 const app = express();
 
-// Add cors middleware
-app.use(cors({
-    origin: '*',  // Allow all origins
-    methods: ['GET', 'POST'],  // Allow GET and POST methods
-    allowedHeaders: ['Content-Type', 'Authorization']  // Allow these headers
-}));
-
+app.use(cors());
 app.use(express.json());
 
-// Serve static files from the 'public' directory if it exists
-app.use(express.static('public'));
-
-// Serve the index.html file from the root directory
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-const HF_API_KEY = process.env.HF_API_KEY;
-
-if (!HF_API_KEY) {
-    console.error('HF_API_KEY is not set. Please set it in your environment or .env file.');
-    // Don't exit the process in serverless environment
-    // Instead, we'll handle this in the route
-}
-
 app.post('/generate-image', async (req, res) => {
-    if (!HF_API_KEY) {
-        return res.status(500).json({ error: 'HF_API_KEY is not set' });
-    }
-
     const { prompt } = req.body;
 
     if (!prompt) {
@@ -48,7 +20,7 @@ app.post('/generate-image', async (req, res) => {
             "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
             {
                 headers: {
-                    Authorization: `Bearer ${HF_API_KEY}`,
+                    Authorization: `Bearer ${process.env.HF_API_KEY}`,
                     "Content-Type": "application/json",
                 },
                 method: "POST",
@@ -61,11 +33,7 @@ app.post('/generate-image', async (req, res) => {
         }
 
         const result = await response.buffer();
-        
-        // Convert buffer to base64
         const base64Image = result.toString('base64');
-        
-        // Send back the base64 encoded image
         res.json({ image: `data:image/png;base64,${base64Image}` });
     } catch (error) {
         console.error('Error:', error);
@@ -73,13 +41,10 @@ app.post('/generate-image', async (req, res) => {
     }
 });
 
-// This is for local development
+// This is for local testing
 if (process.env.NODE_ENV !== 'production') {
-    const port = process.env.PORT || 3000;
-    app.listen(port, () => {
-        console.log(`Server running at http://localhost:${port}`);
-    });
+    app.listen(3000, () => console.log('Local app listening on port 3000!'));
 }
 
-// Export the serverless function
+// This is for Netlify Functions
 module.exports.handler = serverless(app);

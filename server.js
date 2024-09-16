@@ -1,11 +1,11 @@
 const express = require('express');
+const serverless = require('serverless-http');
 const fetch = require('node-fetch');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 // Add cors middleware
 app.use(cors({
@@ -28,10 +28,15 @@ const HF_API_KEY = process.env.HF_API_KEY;
 
 if (!HF_API_KEY) {
     console.error('HF_API_KEY is not set. Please set it in your environment or .env file.');
-    process.exit(1);
+    // Don't exit the process in serverless environment
+    // Instead, we'll handle this in the route
 }
 
 app.post('/generate-image', async (req, res) => {
+    if (!HF_API_KEY) {
+        return res.status(500).json({ error: 'HF_API_KEY is not set' });
+    }
+
     const { prompt } = req.body;
 
     if (!prompt) {
@@ -68,6 +73,13 @@ app.post('/generate-image', async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-});
+// This is for local development
+if (process.env.NODE_ENV !== 'production') {
+    const port = process.env.PORT || 3000;
+    app.listen(port, () => {
+        console.log(`Server running at http://localhost:${port}`);
+    });
+}
+
+// Export the serverless function
+module.exports.handler = serverless(app);

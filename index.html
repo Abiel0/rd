@@ -171,7 +171,7 @@
             downloadBtn.style.display = 'none';
 
             try {
-                const response = await fetch('/functions/server.js', {
+                const response = await fetch('/functions/generate-image', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
